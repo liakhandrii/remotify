@@ -3,7 +3,6 @@ package ua.com.liakh.remotify;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -86,81 +85,40 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
         return super.onOptionsItemSelected(item);
     }
 
-    /*@Override
-    public boolean onTouchEvent(MotionEvent event) {
-
-        int x = Math.round(event.getX());
-        int y = Math.round(event.getY());
-
-        switch (event.getAction()){
-            case MotionEvent.ACTION_DOWN:
-                prevXPosition = -1;
-                prevYPosition = -1;
-
-                mouseDownTime = System.currentTimeMillis();
-                break;
-            case MotionEvent.ACTION_UP:
-                prevXPosition = -1;
-                prevYPosition = -1;
-
-                if (!moved && (System.currentTimeMillis() - mouseDownTime) <= DELAY ){
-                    sendClick();
-                    playClickAnimation(x, y);
-                }
-                break;
-            case MotionEvent.ACTION_MOVE:
-                if (event.getActionIndex() == 1){
-                    if (prevXPosition == -1){
-                        prevXPosition = x;
-                        prevYPosition = y;
-                        return true;
-                    }
-                    int xMove = x - prevXPosition;
-                    int yMove = y - prevYPosition ;
-                    if (xMove!=0||yMove!=0) {
-                        sendMouseMove(xMove, yMove);
-                        prevXPosition = x;
-                        prevYPosition = y;
-                        moved = true;
-                    }else{
-                        moved = false;
-                    }
-                }else if (event.getActionIndex() == 2){
-                    Log.d("Multitouch", "moved");
-                }
-
-                break;
-
-            case MotionEvent.ACTION_POINTER_DOWN:
-                Log.d("Multitouch", event.getActionIndex()+"");
-                break;
-        }
-        return true;
-    }*/
-
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         int x = Math.round(event.getX());
         int y = Math.round(event.getY());
 
-        switch (event.getAction()){
+        switch (event.getActionMasked()){
             case MotionEvent.ACTION_DOWN:
                 prevXPosition = -1;
                 prevYPosition = -1;
 
+                pointersCounter++;
                 mouseDownTime = System.currentTimeMillis();
                 break;
             case MotionEvent.ACTION_UP:
                 prevXPosition = -1;
                 prevYPosition = -1;
 
-                if (!moved && (System.currentTimeMillis() - mouseDownTime) <= DELAY ){
-                    sendClick();
-                    playClickAnimation(x, y);
+                if (pointersCounter == 1){
+                    if (!moved && (System.currentTimeMillis() - mouseDownTime) <= DELAY ){
+                        sendClick();
+                        playClickAnimation(x, y);
+                    }
                 }
+
+                if (pointersCounter == 2){
+                    if (!moved && (System.currentTimeMillis() - mouseDownTime) <= DELAY ){
+                        sendRightClick();
+                        playRightClickAnimation();
+                    }
+                }
+                pointersCounter = 0;
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (event.getActionIndex() == 1){
+                if (event.getPointerCount() == 1){
                     if (prevXPosition == -1){
                         prevXPosition = x;
                         prevYPosition = y;
@@ -176,17 +134,57 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
                     }else{
                         moved = false;
                     }
-                }else if (event.getActionIndex() == 2){
-                    Log.d("Multitouch", "moved");
+                }else if (event.getPointerCount() == 2 && pointersCounter == 2){
+                    int centerX = Math.round((event.getX(0) + event.getX(1))/2f);
+                    int centerY = Math.round((event.getY(0) + event.getY(1))/2f);
+
+                    if (prevXPosition == -1){
+                        prevXPosition = centerX;
+                        prevYPosition = centerY;
+                        return true;
+                    }
+
+                    int xMove = prevXPosition - centerX;
+                    int yMove = prevYPosition - centerY;
+
+                    if (xMove!=0||yMove!=0) {
+                        sendScroll(xMove, yMove);
+                        prevXPosition = centerX;
+                        prevYPosition = centerY;
+                        moved = true;
+                    }else{
+                        moved = false;
+                    }
                 }
 
                 break;
 
             case MotionEvent.ACTION_POINTER_DOWN:
-                Log.d("Multitouch", event.getActionIndex()+"");
+                prevXPosition = -1;
+                prevYPosition = -1;
+                pointersCounter++;
                 break;
         }
         return true;
+    }
+
+    private void sendScroll(int x, int y){
+        if (Math.abs(x) > Math.abs(y))
+            y = 0;
+        else
+            x = 0;
+        if (socket != null)
+            try {
+                PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+                out.println("SCROLL");
+                out.println(x);
+                out.println(y);
+            }catch(IOException e){
+                letThemKnow();
+            }
+        else{
+            letThemKnow();
+        }
     }
 
     private void sendMouseMove(int x, int y){
@@ -209,7 +207,7 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
                 out.println(x);
                 out.println(y);
             }catch(IOException e){
-                e.printStackTrace();
+                letThemKnow();
             }
         else{
             letThemKnow();
@@ -222,7 +220,20 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
                 PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
                 out.println("CLICK");
             }catch(IOException e){
+                letThemKnow();
+            }
+        else{
+            letThemKnow();
+        }
+    }
 
+    private void sendRightClick(){
+        if (socket != null)
+            try {
+                PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+                out.println("RIGHT_CLICK");
+            }catch(IOException e){
+                letThemKnow();
             }
         else{
             letThemKnow();
@@ -252,6 +263,7 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
                 }
             }
         };
+        t.setDaemon(true);
         t.start();
         try {
             t.join();
@@ -298,11 +310,18 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
         clickcircle.startAnimation(animation);
     }
 
+    private void playRightClickAnimation(){
+        Animation animation = AnimationUtils.loadAnimation(getApplicationContext(), R.anim.rightclick);
+        View rightclick = (View)findViewById(R.id.rightclick);
+
+        rightclick.startAnimation(animation);
+    }
+
     private void letThemKnow(){
         //TODO Indicate connection lost
     }
 
-    private int pointerID;
+    private int pointersCounter = 0;
     private int prevXPosition = -1;
     private int prevYPosition = -1;
     private boolean moved = false;

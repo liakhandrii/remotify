@@ -18,4 +18,14 @@
         android:layout_centerHorizontal="true"
         android:visibility="invisible"/>
 
+    <View
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:background="@drawable/rightclick"
+        android:id="@+id/rightclick"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true"
+        android:visibility="invisible"
+        android:layout_margin="10dp"/>
+
 </RelativeLayout>
