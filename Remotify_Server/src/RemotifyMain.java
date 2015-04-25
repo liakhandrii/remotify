@@ -42,12 +42,33 @@ public class RemotifyMain {
 
 		so.startServer();
 
-		if (socket != null) {
-			PrintWriter out = new PrintWriter(new BufferedWriter(
-					new OutputStreamWriter(socket.getOutputStream())), true);
-			out.println("server_disconnect");
-		}
-	}
-
-	
+        if (socket != null) {
+            PrintWriter out = new PrintWriter(new BufferedWriter(
+                                                                 new OutputStreamWriter(socket.getOutputStream())), true);
+            out.println("server_disconnect");
+        }
+    }
+    
+    private static String getMyIP() {
+        
+        try {
+            Enumeration<NetworkInterface> e = NetworkInterface
+            .getNetworkInterfaces();
+            
+            while (e.hasMoreElements()) {
+                NetworkInterface n = (NetworkInterface) e.nextElement();
+                Enumeration<InetAddress> ee = n.getInetAddresses();
+                while (ee.hasMoreElements()) {
+                    InetAddress i = (InetAddress) ee.nextElement();
+                    if (i.getHostAddress().startsWith("192.168.")||i.getHostAddress().startsWith("10."))
+                        return i.getHostAddress();
+                }
+            }
+        } catch (SocketException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+        return "Bad IP";
+    }
+    
 }
