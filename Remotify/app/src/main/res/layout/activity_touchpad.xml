@@ -28,4 +28,13 @@
         android:visibility="invisible"
         android:layout_margin="10dp"/>
 
+    <ImageButton
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:scaleType="fitCenter"
+        android:background="@drawable/not_connected"
+        android:id="@+id/connection_button"
+        android:layout_alignTop="@+id/rightclick"
+        android:layout_alignStart="@+id/rightclick"/>
+
 </RelativeLayout>

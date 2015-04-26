@@ -1,5 +1,7 @@
 package ua.com.liakh.remotify;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.support.v7.app.ActionBarActivity;
@@ -9,6 +11,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 
 import java.io.BufferedReader;
@@ -39,15 +43,83 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
             serverAddress = localServers.get(0);
 
         setContentView(R.layout.activity_touchpad);
+
+        connectionButton = (ImageButton)findViewById(R.id.connection_button);
+
         View touchpad = (View)findViewById(R.id.background);
         touchpad.setOnTouchListener(this);
 
         try {
-            socket = new Socket(serverAddress, PORT);
-            startSayingImHere();
-        }catch(Exception e) {
-
+            connectToServer(serverAddress);
+            connectionButtonEnabled(true);
+        } catch(IOException e){
+            letThemKnow();
         }
+
+        connectionButton.setOnClickListener( new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                loadLocalServers();
+
+                CharSequence servers[] = new CharSequence[localServers.size()+1];
+
+                for (int i = 0; i < localServers.size(); i++){
+                    servers[i] = localServers.get(i);
+                }
+                servers[localServers.size()] = "Custom...";
+
+                AlertDialog.Builder builder = new AlertDialog.Builder(Touchpad.this);
+                builder.setTitle("Choose a server");
+                builder.setItems(servers, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int option) {
+                       if (option < localServers.size()){
+                           try {
+                               serverAddress = localServers.get(option);
+                               connectToServer(serverAddress);
+                               connectionButtonEnabled(true);
+                           } catch(IOException e){
+                               letThemKnow();
+                           }
+                       }else{
+                           AlertDialog.Builder alert = new AlertDialog.Builder(Touchpad.this);
+
+                           alert.setTitle("Enter server IP");
+
+
+                           final EditText input = new EditText(Touchpad.this);
+                           alert.setView(input);
+
+                           alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                               public void onClick(DialogInterface dialog, int whichButton) {
+                                   String value = input.getText().toString();
+                                   try {
+                                       serverAddress = value;
+                                       connectToServer(serverAddress);
+                                       connectionButtonEnabled(true);
+                                   } catch(IOException e){
+                                       letThemKnow();
+                                   }
+                               }
+                           });
+
+                           alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                               public void onClick(DialogInterface dialog, int whichButton) {
+
+                               }
+                           });
+
+                           alert.show();
+
+                       }
+                    }
+                });
+                builder.show();
+
+            }
+
+        });
     }
 
     @Override
@@ -118,7 +190,7 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
                 pointersCounter = 0;
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (event.getPointerCount() == 1){
+                if (event.getPointerCount() == 1 && pointersCounter == 1){
                     if (prevXPosition == -1){
                         prevXPosition = x;
                         prevYPosition = y;
@@ -246,6 +318,7 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
             public void run() {
                 super.run();
                 try {
+                    localServers.clear();
                     Socket mainServer = new Socket("remotify.cloudapp.net", 10481);
                     PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(mainServer.getOutputStream())), true);
                     out.println("client_getList");
@@ -280,7 +353,7 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
                 try {
                     PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
                     while (true) {
-                        out.println("c");
+                        out.println("co");
                         try {
                             Thread.sleep(2000);
                         } catch (InterruptedException e) {
@@ -288,7 +361,7 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
                         }
                     }
                 }catch (IOException e){
-
+                    letThemKnow();
                 }
             }
         };
@@ -318,7 +391,19 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
     }
 
     private void letThemKnow(){
-        //TODO Indicate connection lost
+        connectionButtonEnabled(false);
+    }
+
+    private void connectionButtonEnabled(boolean b){
+        if (b)
+            connectionButton.setBackgroundResource(R.drawable.connected);
+        else
+            connectionButton.setBackgroundResource(R.drawable.not_connected);
+    }
+
+    private void connectToServer(String ip) throws IOException{
+            socket = new Socket(serverAddress, PORT);
+            startSayingImHere();
     }
 
     private int pointersCounter = 0;
@@ -328,5 +413,6 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
     private long mouseDownTime = -1;
     private final long DELAY = 200;
     private Socket socket;
+    private ImageButton connectionButton;
 
 }
