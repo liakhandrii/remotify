@@ -27,7 +27,35 @@ public class MainServer implements Runnable {
 
 	@Override
 	public void run() {
-		
+		System.out.println("Server started at port " + PORT);
+		try {
+			while (!Thread.currentThread().isInterrupted()) {
+				Socket socket = servSocket.accept();
+				System.out.println("A client connected "
+						+ socket.getInetAddress());
+				try {
+					Thread singleServer = new Thread(new ServerThread(socket,
+							con));
+					singleServer.setDaemon(true);
+					singleServer.start();
+				} catch (IOException e) {
+					socket.close();
+					e.printStackTrace();
+				}
+			}
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} finally {
+			try {
+				servSocket.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+	}
 
 }
 
@@ -44,9 +72,77 @@ class ServerThread implements Runnable {
 
 	@Override
 	public void run() {
-		
+		String intServerIP = "";
+		String extServerIP = "";
+		while (true) {
+			try {
+				BufferedReader in = new BufferedReader(new InputStreamReader(
+						socket.getInputStream()));
+				String type = in.readLine();
+				if (type == null){ 
+					if (!intServerIP.equals(""))
+						removeServerFromList(extServerIP, intServerIP);
+					try {
+						socket.close();
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+					break;
+				}
+				
+				if (type != null && !type.equals("c")) {
+					switch (type) {
+					case "server_connect":
+						intServerIP = in.readLine();
+						extServerIP = socket.getInetAddress().getHostAddress();
+						addServerToList(extServerIP, intServerIP);
+						break;
+					case "server_disconnect":
+						removeServerFromList(extServerIP, intServerIP);
+						System.out.println("A client server disconnected"
+								+ socket.getInetAddress());
+						socket.close();
+						break;
+					case "client_getList":
+						PrintWriter out = new PrintWriter(
+								new BufferedWriter(new OutputStreamWriter(
+										socket.getOutputStream())), true);
 
-			
+						for (String serverIP : listServers(socket
+								.getInetAddress().getHostAddress())) {
+							out.println(serverIP);
+						}
+						out.println("end");
+
+						break;
+					}
+				}
+
+			}catch (SocketTimeoutException e) {
+				System.out.println(socket.getInetAddress().getHostAddress()
+						+ " server lost connection");
+				if (!intServerIP.equals(""))
+					removeServerFromList(extServerIP, intServerIP);
+				try {
+					socket.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				break;
+			} catch (IOException e) {
+				if (!intServerIP.equals(""))
+					removeServerFromList(extServerIP, intServerIP);
+				try {
+					socket.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				break;
+			}
+		}
+
 	}
 
 	private void addServerToList(String extIP, String intIP) {
