@@ -1,5 +1,9 @@
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -10,16 +14,21 @@ import java.util.Enumeration;
 
 public class RemotifyMain {
     
+    public static Socket socket = null;
+    public static ServerFrame sf;
+    
     public static void main(String[] args) throws IOException {
-        getMyIP();
         ServerOperator so = new ServerOperator();
-        Socket socket = null;
+        String extIP = "";
         try {
             socket = new Socket("remotify.cloudapp.net", 10481);
             final PrintWriter out = new PrintWriter(new BufferedWriter(
                                                                        new OutputStreamWriter(socket.getOutputStream())), true);
             out.println("server_connect");
             out.println(getMyIP());
+            BufferedReader in = new BufferedReader(new InputStreamReader(
+                                                                         socket.getInputStream()));
+            extIP = in.readLine();
             Thread connectionAlive = new Thread() {
                 @Override
                 public void run() {
@@ -42,15 +51,32 @@ public class RemotifyMain {
         }
         
         so.startServer();
+        sf = new ServerFrame(so, extIP);
         
+        sf.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                disconnect();
+                super.windowClosing(e);
+            }
+        });
+        
+    }
+    
+    private static void disconnect(){
         if (socket != null) {
-            PrintWriter out = new PrintWriter(new BufferedWriter(
-                                                                 new OutputStreamWriter(socket.getOutputStream())), true);
-            out.println("server_disconnect");
+            PrintWriter out;
+            try {
+                out = new PrintWriter(new BufferedWriter(
+                                                         new OutputStreamWriter(socket.getOutputStream())), true);
+                out.println("server_disconnect");
+            } catch (IOException e) {
+                
+            }
         }
     }
     
-    private static String getMyIP() {
+    public static String getMyIP() {
         
         try {
             Enumeration<NetworkInterface> e = NetworkInterface
@@ -72,4 +98,4 @@ public class RemotifyMain {
         return "Bad IP";
     }
     
-
+}
