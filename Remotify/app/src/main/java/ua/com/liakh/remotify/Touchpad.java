@@ -210,6 +210,10 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
                     int centerX = Math.round((event.getX(0) + event.getX(1))/2f);
                     int centerY = Math.round((event.getY(0) + event.getY(1))/2f);
 
+                    //double dx = prevXPosition - (event.getX(0) + event.getX(1))/2f;
+                    //double dy = prevXPosition - (event.getY(0) + event.getY(1))/2f;
+                    //Log.d("Scroll","dx: "+dx+" dy: "+dy);
+
                     if (prevXPosition == -1){
                         prevXPosition = centerX;
                         prevYPosition = centerY;
@@ -218,6 +222,16 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
 
                     int xMove = prevXPosition - centerX;
                     int yMove = prevYPosition - centerY;
+
+                    final float coef = 4;
+
+                    if (xMove >= coef){
+                        xMove = Math.round(xMove/coef);
+                    }
+
+                    if (yMove >= coef){
+                        yMove = Math.round(yMove/coef);
+                    }
 
                     if (xMove!=0||yMove!=0) {
                         sendScroll(xMove, yMove);
@@ -291,7 +305,7 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
             try {
                 PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
                 out.println("CLICK");
-            }catch(IOException e){
+            }catch(Exception e){
                 letThemKnow();
             }
         else{
@@ -414,5 +428,6 @@ public class Touchpad extends ActionBarActivity implements View.OnTouchListener{
     private final long DELAY = 200;
     private Socket socket;
     private ImageButton connectionButton;
+
 
 }
