@@ -79,7 +79,8 @@ class ServerThread implements Runnable {
 				BufferedReader in = new BufferedReader(new InputStreamReader(
 						socket.getInputStream()));
 				String type = in.readLine();
-				if (type == null){ 
+
+				if (type == null) {
 					if (!intServerIP.equals(""))
 						removeServerFromList(extServerIP, intServerIP);
 					try {
@@ -89,12 +90,21 @@ class ServerThread implements Runnable {
 					}
 					break;
 				}
-				
+
 				if (type != null && !type.equals("c")) {
+					PrintWriter out = new PrintWriter(
+							new BufferedWriter(new OutputStreamWriter(
+									socket.getOutputStream())), true);
 					switch (type) {
 					case "server_connect":
-						intServerIP = in.readLine();
+						String s = in.readLine();
+						if (s.equals("c")) {
+							intServerIP = in.readLine();
+						} else {
+							intServerIP = s;
+						}
 						extServerIP = socket.getInetAddress().getHostAddress();
+						out.println(extServerIP);
 						addServerToList(extServerIP, intServerIP);
 						break;
 					case "server_disconnect":
@@ -104,21 +114,17 @@ class ServerThread implements Runnable {
 						socket.close();
 						break;
 					case "client_getList":
-						PrintWriter out = new PrintWriter(
-								new BufferedWriter(new OutputStreamWriter(
-										socket.getOutputStream())), true);
-
-						for (String serverIP : listServers(socket
-								.getInetAddress().getHostAddress())) {
+						for (String serverIP : listServers(socket.getInetAddress().getHostAddress())) {
 							out.println(serverIP);
 						}
+						
 						out.println("end");
 
 						break;
 					}
 				}
 
-			}catch (SocketTimeoutException e) {
+			} catch (SocketTimeoutException e) {
 				System.out.println(socket.getInetAddress().getHostAddress()
 						+ " server lost connection");
 				if (!intServerIP.equals(""))
